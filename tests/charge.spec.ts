@@ -52,4 +52,5 @@ async function setBattery(page: Page, level: string) {
     .fill(level);
   await page.getByRole('button', { name: 'Apply Settings' }).click();
   await page.getByRole('button', { name: 'Confirm' }).click();
+  console.log(`Finished setting charge to ${level}`);
 }

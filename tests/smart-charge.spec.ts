@@ -19,6 +19,9 @@ const WATT = 1000;
 test('Set smart charging', async ({ page }) => {
   await login(page);
   const socAndWatt = await getSocAndWatt(page);
+  console.log(
+    `Battery SoC: ${socAndWatt.soc} Current DC Power: ${socAndWatt.watt}`
+  );
   await openDeviceSettings(page);
 
   const priceLowerThanAverage = await isLowerThanAverage();
@@ -28,12 +31,15 @@ test('Set smart charging', async ({ page }) => {
     priceLowerThanAverage &&
     socAndWatt.watt < WATT
   ) {
+    console.log(`Charging to: ${thresholdHigh}`);
     await setBackupReservedSoc(page, thresholdHigh);
     await preventDischarge(page);
   } else if (priceLowerThanAverage) {
+    console.log('Preventing discharge');
     await setBackupReservedSoc(page, THOLD_L);
     await preventDischarge(page);
   } else {
+    console.log('Allow discharge');
     await setBackupReservedSoc(page, THOLD_L);
     await allowDischarge(page);
   }

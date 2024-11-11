@@ -26,6 +26,7 @@ const DEVIATION_LOW_HOURS = 8;
 export async function isLowerThanAverage(): Promise<boolean> {
   const prices = await getPrices();
   const lookaheadHours = getLookaheadHours(prices);
+  console.log(`Lookahead hours: ${lookaheadHours}`);
   const now = TZDate.tz('Europe/Stockholm');
 
   let sum = 0;
@@ -33,8 +34,10 @@ export async function isLowerThanAverage(): Promise<boolean> {
     sum += prices[i].price;
   }
   const average = sum / lookaheadHours;
-
-  return prices[getHours(now)].price < average;
+  console.log(`Average price: ${average}`);
+  const lowerThanAverage = prices[getHours(now)].price < average;
+  console.log(`Lower than average: ${lowerThanAverage}`);
+  return lowerThanAverage;
 }
 
 function getLookaheadHours(prices: Price[]): number {
@@ -63,6 +66,7 @@ function getLookaheadHours(prices: Price[]): number {
   const deviationAverageDiff = sum / hoursAhead;
 
   const deviationPercentage = deviationAverageDiff / deviationAverageAhead;
+  console.log(`Deviation percentage: ${deviationPercentage}`);
 
   if (deviationPercentage > DEVIATION_PERCENTAGE_HIGH) {
     return DEVIATION_HIGH_HOURS;
