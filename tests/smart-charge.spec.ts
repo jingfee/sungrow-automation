@@ -1,6 +1,7 @@
 import { Page, test } from '@playwright/test';
 import { isLowerThanAverage } from './prices';
 import {
+  confirmSettings,
   getSocAndWatt,
   login,
   openDeviceSettings,
@@ -43,6 +44,7 @@ test('Set smart charging', async ({ page }) => {
     await setBackupReservedSoc(page, THOLD_L);
     await allowDischarge(page);
   }
+  await confirmSettings(page);
 });
 
 function getThresholdHigh() {

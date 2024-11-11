@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 import configuration from './configTypes';
 
 export async function login(page: Page) {
@@ -38,6 +38,9 @@ export async function getSocAndWatt(page: Page) {
   if (wattText.includes('kW')) {
     wattValue *= 1000;
   }
+
+  await page.locator('.header-back').getByText('Details').click();
+  await expect(page.getByText('Live Data Enabled')).toBeVisible();
 
   return { soc: socValue, watt: wattValue };
 }
