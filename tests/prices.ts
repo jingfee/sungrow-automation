@@ -29,7 +29,8 @@ const DEVIATION_HIGH_HOURS = 3;
 const DEVIATION_MID_HOURS = 6;
 const DEVIATION_LOW_HOURS = 8;
 
-const NEXT_HOUR_LOOKAHEAD = 2;
+const NEXT_HOUR_LOOKAHEAD = 3;
+const NEXT_HOUR_PERCENTAGE_DIFF = 0.15;
 
 export async function actionFromPrice(): Promise<PriceAction> {
   const prices = await getPrices();
@@ -61,25 +62,39 @@ export async function actionFromPrice(): Promise<PriceAction> {
 }
 
 function isNextHourCheaper(prices: Price[], nowHour: number): boolean {
-  let isCheaper = true;
-  for (let i = 0; i < NEXT_HOUR_LOOKAHEAD; i++) {
-    isCheaper = prices[nowHour + i + 1].price < prices[nowHour].price;
-    if (!isCheaper) {
-      break;
-    }
+  const priceNow = prices[nowHour].price;
+  const priceNextHour = prices[nowHour + 1].price;
+  if (
+    priceNextHour < priceNow &&
+    (priceNow - priceNextHour) / priceNow > NEXT_HOUR_PERCENTAGE_DIFF
+  ) {
+    return true;
   }
-  return isCheaper;
+
+  let sum = 0;
+  for (let i = 0; i < NEXT_HOUR_LOOKAHEAD; i++) {
+    sum += prices[nowHour + i].price;
+  }
+  const average = sum / NEXT_HOUR_LOOKAHEAD;
+  return priceNow > average;
 }
 
 function isNextHourMoreExpensive(prices: Price[], nowHour: number): boolean {
-  let isMoreExpensive = true;
-  for (let i = 0; i < NEXT_HOUR_LOOKAHEAD; i++) {
-    isMoreExpensive = prices[nowHour + i + 1].price > prices[nowHour].price;
-    if (!isMoreExpensive) {
-      break;
-    }
+  const priceNow = prices[nowHour].price;
+  const priceNextHour = prices[nowHour + 1].price;
+  if (
+    priceNextHour > priceNow &&
+    (priceNextHour - priceNow) / priceNow > NEXT_HOUR_PERCENTAGE_DIFF
+  ) {
+    return true;
   }
-  return isMoreExpensive;
+
+  let sum = 0;
+  for (let i = 0; i < NEXT_HOUR_LOOKAHEAD; i++) {
+    sum += prices[nowHour + i].price;
+  }
+  const average = sum / NEXT_HOUR_LOOKAHEAD;
+  return priceNow < average;
 }
 
 function getLookaheadHours(prices: Price[]): number {
