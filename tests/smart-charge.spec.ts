@@ -1,5 +1,5 @@
 import { Page, test } from '@playwright/test';
-import { isLowerThanAverage } from './prices';
+import { actionFromPrice, PriceAction } from './prices';
 import {
   confirmSettings,
   getSocAndWatt,
@@ -14,7 +14,7 @@ import { getHours, isWeekend } from 'date-fns';
 
 const THOLD_H_NIGHT = 100;
 const THOLD_H_DAY = 80;
-const THOLD_L = 30;
+const THOLD_L = 25;
 const WATT = 1000;
 
 test('Set smart charging', async ({ page }) => {
@@ -25,17 +25,17 @@ test('Set smart charging', async ({ page }) => {
   );
   await openDeviceSettings(page);
 
-  const priceLowerThanAverage = await isLowerThanAverage();
+  const priceAction = await actionFromPrice();
   const thresholdHigh = getThresholdHigh();
   if (
+    priceAction === PriceAction.Charge &&
     socAndWatt.soc < thresholdHigh &&
-    priceLowerThanAverage &&
     socAndWatt.watt < WATT
   ) {
     console.log(`Charging to: ${thresholdHigh}`);
     await setBackupReservedSoc(page, thresholdHigh);
     await preventDischarge(page);
-  } else if (priceLowerThanAverage) {
+  } else if (priceAction !== PriceAction.Discharge) {
     console.log('Preventing discharge');
     await setBackupReservedSoc(page, THOLD_L);
     await preventDischarge(page);

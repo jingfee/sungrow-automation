@@ -13,6 +13,12 @@ interface Price {
   time: string;
 }
 
+export enum PriceAction {
+  Charge,
+  Discharge,
+  Keep,
+}
+
 const VATTENFALL_LOW = 0.16;
 const VATTENFALL_HIGH = 0.536;
 
@@ -23,21 +29,61 @@ const DEVIATION_HIGH_HOURS = 3;
 const DEVIATION_MID_HOURS = 6;
 const DEVIATION_LOW_HOURS = 8;
 
-export async function isLowerThanAverage(): Promise<boolean> {
+export async function actionFromPrice(): Promise<PriceAction> {
   const prices = await getPrices();
   const lookaheadHours = getLookaheadHours(prices);
   console.log(`Lookahead hours: ${lookaheadHours}`);
   const now = TZDate.tz('Europe/Stockholm');
+  const nowHour = getHours(now);
 
   let sum = 0;
-  for (let i = getHours(now); i < getHours(now) + lookaheadHours; i++) {
+  for (let i = nowHour; i < nowHour + lookaheadHours; i++) {
     sum += prices[i].price;
   }
   const average = sum / lookaheadHours;
   console.log(`Average price: ${average}`);
-  const lowerThanAverage = prices[getHours(now)].price < average;
-  console.log(`Lower than average: ${lowerThanAverage}`);
-  return lowerThanAverage;
+
+  if (prices[nowHour].price < average) {
+    console.log('Cheaper than average');
+    const nextHourCheaper = isNextHourCheaper(prices, average, nowHour);
+    console.log(`Next hour cheaper: ${nextHourCheaper}`);
+    return nextHourCheaper ? PriceAction.Keep : PriceAction.Charge;
+  } else if (prices[nowHour].price > average) {
+    console.log('More expensive than average');
+    const nextHourMoreExpensive = isNextHourMoreExpensive(
+      prices,
+      average,
+      nowHour
+    );
+    console.log(`Next hour more expensive: ${nextHourMoreExpensive}`);
+    return nextHourMoreExpensive ? PriceAction.Keep : PriceAction.Discharge;
+  } else {
+    return PriceAction.Keep;
+  }
+}
+
+function isNextHourCheaper(
+  prices: Price[],
+  average: number,
+  nowHour: number
+): boolean {
+  return (
+    prices[nowHour + 1].price < average &&
+    prices[nowHour + 2].price < average &&
+    prices[nowHour + 1].price < prices[nowHour].price
+  );
+}
+
+function isNextHourMoreExpensive(
+  prices: Price[],
+  average: number,
+  nowHour: number
+) {
+  return (
+    prices[nowHour + 1].price > average &&
+    prices[nowHour + 2].price > average &&
+    prices[nowHour + 1].price > prices[nowHour].price
+  );
 }
 
 function getLookaheadHours(prices: Price[]): number {
@@ -94,7 +140,7 @@ async function getPrices(): Promise<Price[]> {
       time: price.time_start,
     });
   }
-  if (tomorrow) {
+  if (priceTomorrow) {
     for (const price of priceTomorrow) {
       prices.push({
         price: price.SEK_per_kWh,
