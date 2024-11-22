@@ -27,23 +27,31 @@ test('Set smart charging', async ({ page }) => {
 
   const priceAction = await actionFromPrice();
   const thresholdHigh = getThresholdHigh();
+  const tentativeThreshold = (thresholdHigh - THOLD_L) / 2 + THOLD_L;
   if (
-    priceAction === PriceAction.Charge &&
+    (priceAction === PriceAction.Charge ||
+      (priceAction === PriceAction.TentativeCharge &&
+        socAndWatt.soc < tentativeThreshold)) &&
     socAndWatt.soc < thresholdHigh &&
     socAndWatt.watt < WATT
   ) {
     console.log(`Charging to: ${thresholdHigh}`);
     await setBackupReservedSoc(page, thresholdHigh);
     await preventDischarge(page);
-  } else if (priceAction !== PriceAction.Discharge) {
-    console.log('Preventing discharge');
-    await setBackupReservedSoc(page, THOLD_L);
-    await preventDischarge(page);
-  } else {
+  } else if (
+    priceAction === PriceAction.Discharge ||
+    (priceAction === PriceAction.TentativeDischarge &&
+      socAndWatt.soc > tentativeThreshold)
+  ) {
     console.log('Allow discharge');
     await setBackupReservedSoc(page, THOLD_L);
     await allowDischarge(page);
+  } else {
+    console.log('Preventing discharge');
+    await setBackupReservedSoc(page, THOLD_L);
+    await preventDischarge(page);
   }
+
   await confirmSettings(page);
 });
 

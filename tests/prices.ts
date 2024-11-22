@@ -17,17 +17,19 @@ export enum PriceAction {
   Charge,
   Discharge,
   Keep,
+  TentativeCharge,
+  TentativeDischarge,
 }
 
 const VATTENFALL_LOW = 0.16;
 const VATTENFALL_HIGH = 0.536;
 
-const DEVIATION_AVERAGE_HOURS = 8;
+const DEVIATION_AVERAGE_HOURS = 10;
 const DEVIATION_PERCENTAGE_HIGH = 0.3;
-const DEVIATION_PERCENTAGE_LOW = 0.1;
-const DEVIATION_HIGH_HOURS = 3;
-const DEVIATION_MID_HOURS = 6;
-const DEVIATION_LOW_HOURS = 8;
+const DEVIATION_PERCENTAGE_LOW = 0.12;
+const DEVIATION_HIGH_HOURS = 7;
+const DEVIATION_MID_HOURS = 8;
+const DEVIATION_LOW_HOURS = 10;
 
 const NEXT_HOUR_LOOKAHEAD = 3;
 const NEXT_HOUR_PERCENTAGE_DIFF = 0.15;
@@ -40,22 +42,33 @@ export async function actionFromPrice(): Promise<PriceAction> {
   const nowHour = getHours(now);
 
   let sum = 0;
+  let summed = 0;
   for (let i = nowHour; i < nowHour + lookaheadHours; i++) {
+    if (i === prices.length) {
+      break;
+    }
     sum += prices[i].price;
+    summed++;
   }
-  const average = sum / lookaheadHours;
+  const average = sum / summed;
   console.log(`Average price: ${average}`);
 
   if (prices[nowHour].price < average) {
     console.log('Cheaper than average');
     const nextHourCheaper = isNextHourCheaper(prices, nowHour);
     console.log(`Next hour cheaper: ${nextHourCheaper}`);
-    return nextHourCheaper ? PriceAction.Keep : PriceAction.Charge;
+    return nextHourCheaper ? PriceAction.TentativeCharge : PriceAction.Charge;
   } else if (prices[nowHour].price > average) {
+    const isNight = nowHour >= 22 || nowHour <= 6;
+    if (isNight) {
+      return PriceAction.Keep;
+    }
     console.log('More expensive than average');
     const nextHourMoreExpensive = isNextHourMoreExpensive(prices, nowHour);
     console.log(`Next hour more expensive: ${nextHourMoreExpensive}`);
-    return nextHourMoreExpensive ? PriceAction.Keep : PriceAction.Discharge;
+    return nextHourMoreExpensive
+      ? PriceAction.TentativeDischarge
+      : PriceAction.Discharge;
   } else {
     return PriceAction.Keep;
   }
